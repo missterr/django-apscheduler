@@ -1,10 +1,9 @@
 # coding=utf-8
 from datetime import timedelta
 
-from django.db import models, connection
+from django.db import models
 from django.utils.safestring import mark_safe
 from django.utils.timezone import now
-import time
 import logging
 
 from django_apscheduler import util
@@ -12,46 +11,11 @@ from django_apscheduler import util
 LOGGER = logging.getLogger("django_apscheduler")
 
 
-class DjangoJobManager(models.Manager):
-    """
-    This manager pings database each request after 30s IDLE to prevent MysqlGoneAway error
-    """
-    _last_ping = 0
-    _ping_interval = 30
-
-    def get_queryset(self):
-        self.__ping()
-        return super(DjangoJobManager, self).get_queryset()
-
-    def __ping(self):
-        if time.time() - self._last_ping < self._ping_interval:
-            return
-
-        try:
-            with connection.cursor() as c:
-                c.execute("SELECT 1")
-        except Exception as e:
-            self.__reconnect()
-
-        self._last_ping = time.time()
-
-    def __reconnect(self):
-        LOGGER.warning("Mysql closed the connection. Perform reconnect...")
-
-        if connection.connection:
-            connection.connection.close()
-            connection.connection = None
-        else:
-            LOGGER.warning("Connection was already closed.")
-
-
 class DjangoJob(models.Model):
     name = models.CharField(max_length=255, unique=True)  # id of job
     next_run_time = models.DateTimeField(db_index=True, blank=True, null=True)
     # Perhaps consider using PickleField down the track.
     job_state = models.BinaryField()
-
-    objects = DjangoJobManager()
 
     def __str__(self):
         status = 'next run at: %s' % util.localize(self.next_run_time) if self.next_run_time else 'paused'
