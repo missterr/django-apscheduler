@@ -10,6 +10,7 @@ from apscheduler.schedulers.base import BaseScheduler
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import connections
+from django import db
 from django.db.utils import OperationalError, ProgrammingError
 
 from django_apscheduler.models import DjangoJob
@@ -35,10 +36,10 @@ def ignore_database_error(on_error_value=None):
                     category=RuntimeWarning,
                     stacklevel=3
                 )
+                db.close_old_connections()
                 return on_error_value
             finally:
-                for connection in connections.all():
-                    connection.close()
+                db.close_old_connections()
         return inner
     return dec
 
@@ -221,6 +222,7 @@ class _EventManager(object):
         self.storage.register_job_executed(job, event)
 
 
+@ignore_database_error()
 def register_events(scheduler, result_storage=None):
     scheduler.add_listener(_EventManager(result_storage))
 
