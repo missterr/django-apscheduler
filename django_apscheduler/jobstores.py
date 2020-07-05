@@ -36,10 +36,10 @@ def ignore_database_error(on_error_value=None):
                     category=RuntimeWarning,
                     stacklevel=3
                 )
-                db.close_old_connections()
+                db.connections.close_all()
                 return on_error_value
             finally:
-                db.close_old_connections()
+                db.connections.close_all()
         return inner
     return dec
 
@@ -199,6 +199,7 @@ class _EventManager(object):
         except Exception as e:
             self.LOGGER.exception(str(e))
 
+    @ignore_database_error()
     def _process_submission_event(self, event):
         # type: (JobSubmissionEvent)->None
 
@@ -210,6 +211,7 @@ class _EventManager(object):
 
         self.storage.get_or_create_job_execution(job, event)
 
+    @ignore_database_error()
     def _process_execution_event(self, event):
         # type: (JobExecutionEvent)->None
 
@@ -222,7 +224,6 @@ class _EventManager(object):
         self.storage.register_job_executed(job, event)
 
 
-@ignore_database_error()
 def register_events(scheduler, result_storage=None):
     scheduler.add_listener(_EventManager(result_storage))
 
