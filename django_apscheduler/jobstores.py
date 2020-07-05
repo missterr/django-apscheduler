@@ -18,6 +18,7 @@ from django_apscheduler.util import deserialize_dt, serialize_dt
 
 LOGGER = logging.getLogger("django_apscheduler")
 
+
 def ignore_database_error(on_error_value=None):
 
     def dec(func):
@@ -35,6 +36,9 @@ def ignore_database_error(on_error_value=None):
                     stacklevel=3
                 )
                 return on_error_value
+            finally:
+                for connection in connections.all():
+                    connection.close()
         return inner
     return dec
 
