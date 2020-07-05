@@ -36,7 +36,6 @@ def ignore_database_error(on_error_value=None):
                     category=RuntimeWarning,
                     stacklevel=3
                 )
-                db.connections.close_all()
                 return on_error_value
             finally:
                 db.connections.close_all()
